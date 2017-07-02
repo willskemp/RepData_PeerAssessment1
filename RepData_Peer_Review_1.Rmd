@@ -1,0 +1,109 @@
+---
+title: "Reproducible Research Week 2 Peer Review"
+author: "Will Kemp"
+date: "22 June 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading & Preprocessing the Data
+
+To begin the analysis, I set my working directory and read the data in using the 'read.csv' function. I then convert the date column to a POSIXCT format to allow easier analysis later on.
+
+```{r read}
+setwd("C:/Users/william.kemp/Desktop/Data Science - John Hopkins/5. Reproducible Research/Week 2 Peer Review/Data")
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date,format ="%Y-%m-%d")
+```
+
+## What is mean total number of steps taken per day?
+
+Firstly, I will remove the missing values from this dataset. Then I aggregate the number of steps taken per day using.
+
+Using this new aggregated data I can calculate the mean number steps taken per day to be:
+
+```{r aggsteps}
+activity2 <-  activity[is.na(activity$steps) == FALSE,]
+aggdata <- aggregate(activity2$steps, by = list(activity2$date),FUN = sum)
+```
+
+Histogram of the number of steps per day:
+```{r histsteps}
+hist(aggdata$x,freq=T, main = "Histogram of Steps (per Day)", xlab = "Steps")
+```
+
+The mean and median steps per day:
+```{r meanmedsteps}
+mean(aggdata$x,na.rm =T)
+median(aggdata$x, na.rm=T)
+```
+
+
+## What is the average daily activity pattern?
+
+Aggregating the dataset (with NAs removed) by the time interval I plot a timeseries of the average number of steps taken per 5 minute interval
+
+```{r plotint, echo=TRUE}
+aggdata <- aggregate(activity2$steps, by=list(activity2$interval),FUN = mean)
+plot(aggdata$Group.1,aggdata$x,type = "l",xlab ="Interval",ylab="Average Steps", main = "Average Steps per Interval")
+```
+
+
+The interval containing the max. number of steps is:
+```{r maxint, echo=TRUE}
+subset(aggdata,max(aggdata$x)==x)$Group.1
+```
+
+## Imputing missing values
+
+The total number of missing values from the original dataset are:
+
+```{r totmissing, echo=TRUE}
+sum(is.na(activity))
+```
+
+To complete these missing values I will use a linear regression model to estimate the missing data:
+```{r lmmissing, echo=TRUE}
+model <- lm(steps~date + interval, data = activity)
+activity <- within(activity,steps <- ifelse(is.na(steps),as.integer(predict(model,activity[,c(2,3)])),steps))
+aggdata <- aggregate(activity$steps, by = list(activity$date),FUN = sum)
+```
+
+I then aggregate the data by day as before, and create a histogram of the steps taken, with the new completed dataset:
+
+```{r histcompletedat, echo=TRUE}
+aggdata <- aggregate(activity$steps, by = list(activity$date),FUN = sum)
+hist(aggdata$x,freq=T, main = "Histogram of Steps (per Day)", xlab = "Steps")
+```
+
+The mean and median of the new dataset are as follows:
+
+```{r meanmedcompletedat, echo=TRUE}
+mean(aggdata$x,na.rm =T)
+median(aggdata$x, na.rm=T)
+```
+
+Imputing the missing data using a linear model has had the impact of slightly reducing both the mean and median of the data.
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+Firstly, I create a new factor variable using the weekdays() function. I then change these to the labels 'Weekend' and Weekday:
+
+```{r weekday, echo=TRUE}
+activity$weekday <- weekdays(activity$date)
+activity$weekday[!(activity$weekday %in% c("Saturday","Sunday"))] <- "Weekday"
+activity$weekday[activity$weekday %in% c("Saturday","Sunday")] <- "Weekend"
+activity$weekday <- as.factor(activity$weekday)
+```
+
+I then aggregate the number of steps by the newly created factor variable. Finally, I plot a lattice time series graph to show the difference in evolution of steps per 5 minute interval
+
+```{r weekdayplot, echo=TRUE}
+require(lattice)
+aggdata <- aggregate(activity$steps, by=list(activity$weekday,activity$interval),FUN = mean)
+xyplot(aggdata$x~aggdata$Group.2|as.factor(aggdata$Group.1),type="b",layout =c(1,2))
+```
+
