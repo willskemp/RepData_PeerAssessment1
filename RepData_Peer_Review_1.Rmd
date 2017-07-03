@@ -2,7 +2,7 @@
 title: "Reproducible Research Week 2 Peer Review"
 author: "Will Kemp"
 date: "22 June 2017"
-output: html_document
+output: md_document
 ---
 
 ```{r setup, include=FALSE}
